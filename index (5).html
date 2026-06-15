@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #16161d;
+    --surface2: #1e1e28;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0eff5;
+    --muted: #8b8a9a;
+    --accent: #7f77dd;
+    --accent2: #a49fe8;
+    --accent-glow: rgba(127,119,221,0.15);
+    --danger: #e24b4a;
+    --danger-bg: rgba(226,75,74,0.1);
+    --success: #1d9e75;
+    --success-bg: rgba(29,158,117,0.1);
+    --warn: #ba7517;
+    --warn-bg: rgba(186,117,23,0.1);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(127,119,221,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(127,119,221,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Enterprise topbar */
+  .topbar {
+    position: relative;
+    z-index: 2;
+    border-bottom: 1px solid var(--border);
+    background: rgba(22,22,29,0.85);
+    backdrop-filter: blur(8px);
+  }
+  .topbar-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0.7rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .topbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    color: var(--text);
+  }
+  .topbar-brand .brand-mark {
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .topbar-brand .brand-mark svg { width: 15px; height: 15px; }
+  .topbar-brand .brand-org { color: var(--muted); font-weight: 500; }
+  .badge-internal {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--accent2);
+    background: var(--accent-glow);
+    border: 1px solid rgba(127,119,221,0.25);
+  }
+  .badge-internal svg { width: 12px; height: 12px; }
+
+  /* Enterprise footer */
+  .app-footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+  .app-footer-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.25rem 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .app-footer-inner .sep { color: var(--border2); }
+  .app-footer-inner a {
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .app-footer-inner a:hover { color: var(--accent2); }
+  .app-footer-inner .foot-org { color: var(--text); font-weight: 600; }
+  .app-footer-inner .foot-spacer { flex: 1 1 auto; }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 22px; height: 22px; }
+  .logo-text {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .logo-text span { color: var(--accent2); }
+  .header-sub {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* Layout */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+  }
+
+  /* Type tabs */
+  .type-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-bottom: 1.5rem;
+    background: var(--surface2);
+    padding: 5px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  .type-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 500;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+  .type-tab:hover { color: var(--text); background: var(--border); }
+  .type-tab.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  .type-tab svg { width: 18px; height: 18px; }
+
+  /* Form fields */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .field-group { margin-bottom: 1.25rem; }
+
+  input[type="text"], input[type="email"], input[type="tel"], input[type="password"], textarea, select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  select option { background: #1e1e28; }
+
+  /* Email validation states */
+  input.input-valid { border-color: var(--success); }
+  input.input-valid:focus { border-color: var(--success); box-shadow: 0 0 0 3px var(--success-bg); }
+  input.input-invalid { border-color: var(--danger); }
+  input.input-invalid:focus { border-color: var(--danger); box-shadow: 0 0 0 3px var(--danger-bg); }
+
+  .field-hint {
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 6px;
+    min-height: 16px;
+    transition: color 0.15s;
+  }
+  .field-hint.hint-valid { color: var(--success); }
+  .field-hint.hint-invalid { color: var(--danger); }
+
+  .inline-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* Alert */
+  .alert {
+    display: none;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .alert.show { display: flex; }
+  .alert.danger { background: var(--danger-bg); border: 1px solid rgba(226,75,74,0.2); color: #f07b7a; }
+  .alert.warn { background: var(--warn-bg); border: 1px solid rgba(186,117,23,0.2); color: #e8a040; }
+  .alert svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Generate button */
+  .btn-generate {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.15s;
+    letter-spacing: 0.2px;
+  }
+  .btn-generate:hover { background: #9188e8; }
+  .btn-generate:active { transform: scale(0.99); }
+  .btn-generate svg { width: 18px; height: 18px; }
+
+  /* Right panel - QR output */
+  .qr-panel {
+    position: sticky;
+    top: 1.5rem;
+  }
+
+  .qr-display {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .qr-placeholder {
+    height: 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    border: 1px dashed var(--border2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 1rem;
+  }
+  .qr-placeholder svg { width: 36px; height: 36px; opacity: 0.3; }
+  .qr-placeholder p { font-size: 13px; }
+
+  #qr-output {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  #qr-output canvas, #qr-output img {
+    border-radius: 8px;
+    border: 6px solid #fff;
+  }
+
+  .qr-meta {
+    display: none;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    padding: 8px 10px;
+    background: var(--surface2);
+    border-radius: 6px;
+    text-align: left;
+    line-height: 1.8;
+  }
+  .qr-meta strong { color: var(--text); }
+
+  .btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .btn-secondary {
+    padding: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn-secondary:hover { background: var(--border2); }
+  .btn-secondary svg { width: 15px; height: 15px; }
+  .btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Customization */
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.25rem 0;
+  }
+
+  .color-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .color-swatch {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .color-swatch.active {
+    border-color: #fff;
+    box-shadow: 0 0 0 2px var(--accent);
+    transform: scale(1.1);
+  }
+  .color-swatch.custom-swatch {
+    background: conic-gradient(red, yellow, green, cyan, blue, magenta, red);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #fff;
+    overflow: hidden;
+  }
+  #custom-color-input {
+    position: absolute;
+    opacity: 0;
+    width: 100%; height: 100%;
+    cursor: pointer;
+  }
+
+  .size-options {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .size-opt {
+    padding: 6px 0;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .size-opt:hover { color: var(--text); border-color: var(--border2); }
+  .size-opt.active {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+
+  /* Use cases */
+  .use-cases {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 1.25rem;
+  }
+  .use-case-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .use-case-card:hover {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+  .use-case-icon {
+    font-size: 20px;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .use-case-title { font-size: 12px; font-weight: 600; color: var(--text); }
+  .use-case-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #2a2a38;
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.25s;
+    z-index: 100;
+    white-space: nowrap;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @media (max-width: 720px) {
+    .main-layout { grid-template-columns: 1fr; }
+    .qr-panel { position: static; }
+    .type-tabs { grid-template-columns: repeat(5, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </span>
+      <span>Cổng công cụ nội bộ <span class="brand-org">· Phòng CNTT</span></span>
+    </div>
+    <div class="badge-internal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      Hệ thống nội bộ &middot; Chỉ dành cho nhân viên
+    </div>
+  </div>
+</header>
+
+<div class="app">
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="3" height="3" rx="0.5"/><rect x="18" y="14" width="3" height="3" rx="0.5"/>
+          <rect x="14" y="18" width="3" height="3" rx="0.5"/><rect x="18" y="18" width="3" height="3" rx="0.5"/>
+        </svg>
+      </div>
+      <span class="logo-text">QR<span>Studio</span></span>
+    </div>
+    <p class="header-sub">Tạo mã QR nhanh chóng · Hỗ trợ URL, Text, Email, Phone, WiFi</p>
+  </div>
+
+  <div class="main-layout">
+    <!-- Left: Input panel -->
+    <div>
+      <div class="panel">
+        <!-- Type tabs -->
+        <div class="type-tabs">
+          <button class="type-tab active" data-type="url" onclick="setType('url',this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            URL
+          </button>
+          <button class="type-tab" data-type="text" onclick="setType('text',this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+            Text
+          </button>
+          <button class="type-tab" data-type="email" onclick="setType('email',this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Email
+          </button>
+          <button class="type-tab" data-type="phone" onclick="setType('phone',this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.44 2 2 0 0 1 3.59 1.25h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.08-.97a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.75 16.9z"/></svg>
+            Phone
+          </button>
+          <button class="type-tab" data-type="wifi" onclick="setType('wifi',this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+            WiFi
+          </button>
+        </div>
+
+        <!-- Dynamic form -->
+        <div id="form-url">
+          <div class="field-group">
+            <div class="section-label">Địa chỉ website</div>
+            <input type="text" id="url-input" placeholder="https://example.com" />
+          </div>
+        </div>
+
+        <div id="form-text" style="display:none">
+          <div class="field-group">
+            <div class="section-label">Nội dung văn bản</div>
+            <textarea id="text-input" placeholder="Nhập nội dung bạn muốn mã hoá..."></textarea>
+          </div>
+        </div>
+
+        <div id="form-email" style="display:none">
+          <div class="field-group">
+            <div class="section-label">Địa chỉ email</div>
+            <input type="email" id="email-input" placeholder="ten@congty.com.vn" oninput="validateEmailField(this)" />
+            <div class="field-hint" id="email-hint"></div>
+          </div>
+          <div class="field-group">
+            <div class="section-label">Tiêu đề (tuỳ chọn)</div>
+            <input type="text" id="email-subject" placeholder="Tiêu đề email..." />
+          </div>
+          <div class="field-group">
+            <div class="section-label">Nội dung (tuỳ chọn)</div>
+            <textarea id="email-body" placeholder="Nội dung email..." style="min-height:60px"></textarea>
+          </div>
+        </div>
+
+        <div id="form-phone" style="display:none">
+          <div class="field-group">
+            <div class="section-label">Số điện thoại</div>
+            <input type="tel" id="phone-input" placeholder="+84 9xx xxx xxxx" />
+          </div>
+        </div>
+
+        <div id="form-wifi" style="display:none">
+          <div class="field-group">
+            <div class="section-label">Tên mạng (SSID)</div>
+            <input type="text" id="wifi-ssid" placeholder="Tên WiFi..." />
+          </div>
+          <div class="field-group">
+            <div class="section-label">Mật khẩu</div>
+            <input type="password" id="wifi-password" placeholder="Mật khẩu..." />
+          </div>
+          <div class="field-group">
+            <div class="section-label">Loại bảo mật</div>
+            <select id="wifi-security">
+              <option value="WPA">WPA / WPA2 (khuyến nghị)</option>
+              <option value="WEP">WEP (legacy)</option>
+              <option value="nopass">Không có mật khẩu</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Alert -->
+        <div class="alert danger" id="content-alert">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="alert-msg">Nội dung vi phạm chính sách.</span>
+        </div>
+
+        <div class="alert warn" id="content-warn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span id="warn-msg">Vui lòng kiểm tra lại nội dung.</span>
+        </div>
+
+        <button class="btn-generate" onclick="generateQR()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+          Tạo mã QR
+        </button>
+      </div>
+
+      <!-- Customization -->
+      <div class="panel" style="margin-top: 1.25rem;">
+        <div class="section-label" style="margin-bottom:12px">Tuỳ chỉnh</div>
+
+        <div class="field-group">
+          <div class="section-label">Màu sắc</div>
+          <div class="color-options">
+            <div class="color-swatch active" style="background:#1a1a2e" data-color="#1a1a2e" onclick="setColor(this)"></div>
+            <div class="color-swatch" style="background:#7f77dd" data-color="#7f77dd" onclick="setColor(this)"></div>
+            <div class="color-swatch" style="background:#1d9e75" data-color="#1d9e75" onclick="setColor(this)"></div>
+            <div class="color-swatch" style="background:#d85a30" data-color="#d85a30" onclick="setColor(this)"></div>
+            <div class="color-swatch" style="background:#185fa5" data-color="#185fa5" onclick="setColor(this)"></div>
+            <div class="color-swatch" style="background:#993556" data-color="#993556" onclick="setColor(this)"></div>
+            <div class="color-swatch" style="background:#3b6d11" data-color="#3b6d11" onclick="setColor(this)"></div>
+            <div class="color-swatch" style="background:#854f0b" data-color="#854f0b" onclick="setColor(this)"></div>
+            <div class="color-swatch custom-swatch" title="Màu tuỳ chỉnh">
+              +
+              <input type="color" id="custom-color-input" value="#7f77dd" onchange="setCustomColor(this.value)">
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="section-label">Kích thước (px)</div>
+          <div class="size-options">
+            <div class="size-opt" data-size="150" onclick="setSize(this)">150</div>
+            <div class="size-opt" data-size="200" onclick="setSize(this)">200</div>
+            <div class="size-opt active" data-size="300" onclick="setSize(this)">300</div>
+            <div class="size-opt" data-size="400" onclick="setSize(this)">400</div>
+            <div class="size-opt" data-size="500" onclick="setSize(this)">500</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Use cases -->
+      <div class="panel" style="margin-top: 1.25rem;">
+        <div class="section-label" style="margin-bottom:12px">Trường hợp sử dụng phổ biến</div>
+        <div class="use-cases">
+          <div class="use-case-card" onclick="quickFill('event')">
+            <span class="use-case-icon">📅</span>
+            <div class="use-case-title">Đăng ký sự kiện</div>
+            <div class="use-case-desc">Link form đăng ký online</div>
+          </div>
+          <div class="use-case-card" onclick="quickFill('wifi')">
+            <span class="use-case-icon">📶</span>
+            <div class="use-case-title">Chia sẻ WiFi</div>
+            <div class="use-case-desc">Cho phòng họp, khách đến</div>
+          </div>
+          <div class="use-case-card" onclick="quickFill('feedback')">
+            <span class="use-case-icon">📝</span>
+            <div class="use-case-title">Khảo sát phản hồi</div>
+            <div class="use-case-desc">Google Form, survey link</div>
+          </div>
+          <div class="use-case-card" onclick="quickFill('contact')">
+            <span class="use-case-icon">📧</span>
+            <div class="use-case-title">Liên hệ email</div>
+            <div class="use-case-desc">Mở sẵn email với recipient</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: QR output -->
+    <div class="qr-panel">
+      <div class="qr-display">
+        <div class="section-label" style="text-align:left; margin-bottom:12px">Mã QR</div>
+
+        <div class="qr-placeholder" id="qr-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="5" y="5" width="3" height="3"/><rect x="16" y="5" width="3" height="3"/>
+            <rect x="5" y="16" width="3" height="3"/>
+            <line x1="14" y1="14" x2="17" y2="14"/><line x1="14" y1="17" x2="14" y2="21"/>
+            <line x1="17" y1="17" x2="21" y2="17"/><line x1="21" y1="14" x2="21" y2="21"/>
+            <line x1="17" y1="21" x2="21" y2="21"/>
+          </svg>
+          <p>Nhập nội dung và nhấn<br><strong>Tạo mã QR</strong></p>
+        </div>
+
+        <div id="qr-output"></div>
+        <div class="qr-meta" id="qr-meta"></div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" id="btn-download" onclick="downloadQR()" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Tải PNG
+          </button>
+          <button class="btn-secondary" id="btn-copy" onclick="copyQR()" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Sao chép
+          </button>
+        </div>
+
+        <div style="margin-top:1rem; padding:10px; background:var(--surface2); border-radius:6px; border:1px solid var(--border)">
+          <div style="font-size:11px; color:var(--muted); line-height:1.8">
+            <div style="font-weight:600; color:var(--text); margin-bottom:4px; font-size:12px">💡 Mẹo sử dụng</div>
+            Tối thiểu 2cm×2cm khi in · QR tối trên nền sáng · Kiểm tra trước khi dùng
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="app-footer">
+  <div class="app-footer-inner">
+    <span class="foot-org">QR Studio</span>
+    <span class="sep">·</span>
+    <span>Hệ thống nội bộ</span>
+    <span class="sep">·</span>
+    <span>Phiên bản 2.1.0</span>
+    <span class="foot-spacer"></span>
+    <a href="#" onclick="showToast('Tài liệu hướng dẫn đang được cập nhật'); return false;">Hướng dẫn sử dụng</a>
+    <span class="sep">·</span>
+    <a href="#" onclick="showToast('Liên hệ Phòng CNTT để được hỗ trợ'); return false;">Báo lỗi / Góp ý IT</a>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var currentType = 'url';
+var currentColor = '#1a1a2e';
+var currentSize = 300;
+var qrInstance = null;
+
+// ================================================================
+// EMAIL VALIDATION
+// Chỉ chấp nhận email đúng định dạng với domain hợp lệ
+// (vd: ten@congty.com.vn, ten@truong.edu.vn, info@tochuc.org)
+// ================================================================
+var EMAIL_REGEX = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,24}$/;
+
+function isValidEmail(email) {
+  email = (email || '').trim();
+  if (!email || email.length > 254) return false;
+  if (!EMAIL_REGEX.test(email)) return false;
+
+  var parts = email.split('@');
+  var local = parts[0];
+  var domain = parts[1];
+
+  // Local-part: không vượt 64 ký tự, không có dấu chấm ở đầu/cuối hoặc lặp
+  if (local.length > 64) return false;
+  if (local.charAt(0) === '.' || local.charAt(local.length - 1) === '.') return false;
+  if (local.indexOf('..') !== -1) return false;
+
+  // Domain: không có chấm lặp, phải có ít nhất một dấu chấm (vd .com, .com.vn)
+  if (domain.indexOf('..') !== -1) return false;
+  if (domain.indexOf('.') === -1) return false;
+
+  // TLD cuối phải là chữ cái (loại bỏ domain rác/IP)
+  var tld = domain.split('.').pop();
+  if (!/^[A-Za-z]{2,24}$/.test(tld)) return false;
+
+  return true;
+}
+
+function validateEmailField(input) {
+  var hint = document.getElementById('email-hint');
+  var val = input.value.trim();
+
+  input.classList.remove('input-valid', 'input-invalid');
+  hint.classList.remove('hint-valid', 'hint-invalid');
+
+  if (!val) {
+    hint.textContent = '';
+    return;
+  }
+
+  if (isValidEmail(val)) {
+    input.classList.add('input-valid');
+    hint.classList.add('hint-valid');
+    hint.textContent = '\u2713 Email hợp lệ';
+  } else {
+    input.classList.add('input-invalid');
+    hint.classList.add('hint-invalid');
+    hint.textContent = '\u2717 Email chưa đúng định dạng. Ví dụ: ten@congty.com.vn, ten@truong.edu.vn';
+  }
+}
+
+// ================================================================
+// COMPREHENSIVE CONTENT FILTER
+// Kết hợp danh sách từ file + phân tích thêm các biến thể bypass
+// ================================================================
+var BANNED_PATTERNS = [
+  // 1. TỪ TRỰC TIẾP - Vietnamese profanity
+  /\b(địt|đụ|đéo|lồn|cặc|buồi|đĩ|chịch|phang)\b/i,
+  /\b(vãi\s*lồn|vãi\s*cả\s*lồn|con\s*cặc|cái\s*lồn)\b/i,
+  /\b(bú\s*cu|bú\s*cặc|sục\s*cu|sục\s*cặc|địt\s*nhau|đụ\s*nhau)\b/i,
+  /\b(địt\s*mẹ|đụ\s*mẹ|đụ\s*má|địt\s*cụ|cút\s*mẹ)\b/i,
+  /\b(chết\s*mẹ|chết\s*cha|chết\s*bà)\b/i,
+  /\b(đĩ\s*mẹ|đầu\s*khấc)\b/i,
+
+  // 2. VIẾT TẮT phổ biến
+  /\b(dm|đm|dmm|dcm|dkm|đkm|dmk|dcmm|ditmemay|ditme)\b/i,
+  /\b(vl|vcl|vkl|vcc|vcđ|vll|vcloz|vloz|clm|clgt)\b/i,
+  /\b(cl|cc|cđb)\b(?!\s*[a-z])/i,
+
+  // 3. BIẾN THỂ KHÔNG DẤU (bypass dấu)
+  /\b(dit|djt|dut|duc|leo|lon|cac|buoi|di|dj)\b/i,
+  /\b(ditme|djtme|ditme\s*may|du\s*ma|du\s*me|du\s*ma\s*may)\b/i,
+  /\b(djtm|dmie|dm[aeiou]e?)\b/i,
+
+  // 4. THAY THẾ KÝ TỰ số/ký hiệu
+  /d[i!1|j]t/i,         // d!t, d|t, d1t, djt
+  /l[o0@*][nñ]/i,       // l0n, l@n, lon, l*n
+  /c[a4@][ck]/i,        // c4c, c@c, cac
+  /b[u|ú][o0]i/i,       // bu0i, buoi
+  /v[aã][i!1]/i,        // vai, vãi + biến thể
+  /[dđ][mñ]/i,          // dm, đm
+
+  // 5. VIẾT HOA TOÀN BỘ (bypass bằng hoa)
+  /\b(DIT|DJT|LON|CAC|BUOI|DM|VL|VCL|DCM|DKM)\b/,
+  /\b(DITME|DJITME|DUONG|FUCK|SHIT|BITCH|CUNT)\b/,
+
+  // 6. THÊM KÝ TỰ GIỮA (bypass bằng chèn)
+  /d[.\-_*]?[i!1j][.\-_*]?t/i,
+  /l[.\-_*]?[o0][.\-_*]?n/i,
+  /c[.\-_*]?[a4][.\-_*]?c/i,
+  /f[.\-_*]?[u*][.\-_*]?c[.\-_*]?k/i,
+  /s[.\-_*]?h[.\-_*]?[i!1][.\-_*]?t/i,
+
+  // 7. LEETSPEAK / ALPHANUMERIC
+  /d[1!|]t/i,
+  /l[0@]n/i,
+  /c[@4]c/i,
+  /f[*u][ck]/i,
+  /[s$]h[i!1]t/i,
+  /b[!i]tch/i,
+  /[a@][s$][s$]/i,
+
+  // 8. TIẾNG ANH
+  /\b(fuck|fucking|fucked|fucker|motherfucker)\b/i,
+  /\b(shit|bullshit|horseshit)\b/i,
+  /\b(bitch|son\s*of\s*a\s*bitch)\b/i,
+  /\b(asshole|bastard|dickhead|dickface)\b/i,
+  /\b(cock|cunt|pussy|whore|slut)\b/i,
+  /\b(retard|moron|idiot)\b/i,
+  /\b(wtf|stfu|gtfo|ffs)\b/i,
+  /\b(mf|omfg|lmfao)\b/i,
+
+  // 9. VIẾT LÁI / NÓI TRÁNH
+  /\b(vãi\s*nồi|vãi\s*chưởng|vãi\s*đạn|vl\s*luôn)\b/i,
+  /\b(lờ\s*o\s*lờ|lol|l0l)\b/i,
+  /\b(đệt|đệt\s*mịa|đệt\s*cụ|mịa|mịt)\b/i,
+  /\b(lìn|lon\s*má|bỏ\s*mẹ)\b/i,
+
+  // 10. XÚC PHẠM / MIỆT THỊ
+  /\b(óc\s*chó|óc\s*lợn|đần\s*độn|thiểu\s*năng)\b/i,
+  /\b(khốn\s*nạn|mất\s*dạy|vô\s*học|cặn\s*bã)\b/i,
+  /\b(chó\s*má|chó\s*chết|súc\s*vật)\b/i,
+  /\b(thằng\s*hãm|con\s*hãm|bệnh\s*hoạn|biến\s*thái)\b/i,
+  /\b(ngu\s*học|não\s*tàn|rác\s*rưởi)\b/i,
+
+  // 11. NỘI DUNG KHIÊU DÂM
+  /\b(khiêu\s*dâm|porn|nsfw|xxx|adult\s*content)\b/i,
+  /\b(sex\s*video|nude|naked|topless)\b/i,
+  /\b(18\+\s*content|erotic|hentai)\b/i,
+
+  // 12. REGEX TỔNG HỢP (pattern chung)
+  /[dđ][i1!|j][t7](\s*m[eẹ3])?/i,   // địt / đụ patterns
+  /[vV][aãâ][iI1!]/,                  // vãi
+  /[cC][lL1][cC]?/,                   // cl, clc
+
+  // 13. VIẾT LẬP LẠI KÝ TỰ ĐỂ LÁCH (d-i-t, d.i.t)
+  /[dđ][\s.\-_\/\\|,]*[iíìĩị1!j][\s.\-_\/\\|,]*[t7]/i,
+  /[lL][\s.\-_\/\\|,]*[oóòõọ0@*][\s.\-_\/\\|,]*[nN]/i,
+
+  // 14. UNICODE LOOKALIKES (dùng chữ trông giống)
+  /\u0111\u1ECB\u0074/,   // địt dùng unicode
+  /d\uFF49t/i,             // dｉt (fullwidth i)
+];
+
+// Từ đơn cần check chính xác
+var BANNED_WORDS_EXACT = [
+  'dm','đm','dmm','dcm','dkm','đkm','vl','vcl','vkl','vcc','cl','cc',
+  'wtf','stfu','ffs','fuck','shit','cunt','bitch','ass',
+  'dit','djt','lon','cac','buoi',
+  'địt','đụ','lồn','cặc','buồi','đĩ','đéo',
+];
+
+function containsBannedContent(text) {
+  var lower = text.toLowerCase().trim();
+
+  // Kiểm tra từ chính xác
+  for (var i = 0; i < BANNED_WORDS_EXACT.length; i++) {
+    var w = BANNED_WORDS_EXACT[i];
+    if (lower === w || lower.indexOf(' ' + w + ' ') !== -1 ||
+        lower.startsWith(w + ' ') || lower.endsWith(' ' + w) ||
+        lower === w) {
+      return { banned: true, word: w };
+    }
+  }
+
+  // Kiểm tra pattern
+  for (var p = 0; p < BANNED_PATTERNS.length; p++) {
+    var match = text.match(BANNED_PATTERNS[p]);
+    if (match) {
+      return { banned: true, word: match[0] };
+    }
+  }
+
+  return { banned: false };
+}
+
+function getContentToCheck() {
+  if (currentType === 'url') return document.getElementById('url-input').value;
+  if (currentType === 'text') return document.getElementById('text-input').value;
+  if (currentType === 'email') {
+    return [
+      document.getElementById('email-input').value,
+      document.getElementById('email-subject').value,
+      document.getElementById('email-body').value
+    ].join(' ');
+  }
+  if (currentType === 'phone') return document.getElementById('phone-input').value;
+  if (currentType === 'wifi') {
+    return [
+      document.getElementById('wifi-ssid').value,
+      document.getElementById('wifi-password').value
+    ].join(' ');
+  }
+  return '';
+}
+
+function buildQRContent() {
+  if (currentType === 'url') {
+    var url = document.getElementById('url-input').value.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://') && url.length > 0) {
+      url = 'https://' + url;
+    }
+    return url;
+  }
+  if (currentType === 'text') return document.getElementById('text-input').value.trim();
+  if (currentType === 'email') {
+    var email = document.getElementById('email-input').value.trim();
+    var subject = document.getElementById('email-subject').value.trim();
+    var body = document.getElementById('email-body').value.trim();
+    var result = 'mailto:' + email;
+    var params = [];
+    if (subject) params.push('subject=' + encodeURIComponent(subject));
+    if (body) params.push('body=' + encodeURIComponent(body));
+    if (params.length) result += '?' + params.join('&');
+    return result;
+  }
+  if (currentType === 'phone') {
+    return 'tel:' + document.getElementById('phone-input').value.trim().replace(/\s/g,'');
+  }
+  if (currentType === 'wifi') {
+    var ssid = document.getElementById('wifi-ssid').value;
+    var pass = document.getElementById('wifi-password').value;
+    var sec = document.getElementById('wifi-security').value;
+    return 'WIFI:T:' + sec + ';S:' + ssid + ';P:' + pass + ';;';
+  }
+  return '';
+}
+
+function generateQR() {
+  // Hide alerts
+  document.getElementById('content-alert').classList.remove('show');
+  document.getElementById('content-warn').classList.remove('show');
+
+  var content = getContentToCheck();
+  if (!content.trim()) {
+    document.getElementById('warn-msg').textContent = 'Vui lòng nhập nội dung trước khi tạo mã QR.';
+    document.getElementById('content-warn').classList.add('show');
+    return;
+  }
+
+  // Kiểm tra định dạng email (chỉ áp dụng cho loại Email)
+  if (currentType === 'email') {
+    var emailVal = document.getElementById('email-input').value.trim();
+    if (!isValidEmail(emailVal)) {
+      validateEmailField(document.getElementById('email-input'));
+      document.getElementById('warn-msg').textContent =
+        'Email chưa đúng định dạng. Vui lòng nhập địa chỉ hợp lệ, ví dụ: ten@congty.com.vn';
+      document.getElementById('content-warn').classList.add('show');
+      return;
+    }
+  }
+
+  // Check banned content
+  var checkResult = containsBannedContent(content);
+  if (checkResult.banned) {
+    document.getElementById('alert-msg').textContent =
+      'Nội dung vi phạm chính sách nội dung. Phát hiện từ ngữ không phù hợp: "' +
+      checkResult.word + '". Vui lòng chỉnh sửa và thử lại.';
+    document.getElementById('content-alert').classList.add('show');
+    return;
+  }
+
+  var qrContent = buildQRContent();
+  if (!qrContent) {
+    document.getElementById('warn-msg').textContent = 'Nội dung không hợp lệ.';
+    document.getElementById('content-warn').classList.add('show');
+    return;
+  }
+
+  // Clear old QR
+  var outputEl = document.getElementById('qr-output');
+  outputEl.innerHTML = '';
+
+  try {
+    qrInstance = new QRCode(outputEl, {
+      text: qrContent,
+      width: currentSize,
+      height: currentSize,
+      colorDark: currentColor,
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch(e) {
+    document.getElementById('warn-msg').textContent = 'Không thể tạo QR: nội dung quá dài hoặc không hợp lệ.';
+    document.getElementById('content-warn').classList.add('show');
+    return;
+  }
+
+  // Show output
+  document.getElementById('qr-placeholder').style.display = 'none';
+  outputEl.style.display = 'flex';
+
+  // Meta
+  var typeLabels = {url:'URL', text:'Văn bản', email:'Email', phone:'Số điện thoại', wifi:'WiFi'};
+  var meta = document.getElementById('qr-meta');
+  meta.style.display = 'block';
+  meta.innerHTML =
+    '<strong>Loại:</strong> ' + typeLabels[currentType] + ' &nbsp;·&nbsp; ' +
+    '<strong>Kích thước:</strong> ' + currentSize + 'px &nbsp;·&nbsp; ' +
+    '<strong>Ký tự:</strong> ' + qrContent.length;
+
+  document.getElementById('btn-download').disabled = false;
+  document.getElementById('btn-copy').disabled = false;
+
+  showToast('✓ Đã tạo mã QR thành công');
+}
+
+function downloadQR() {
+  var canvas = document.querySelector('#qr-output canvas');
+  if (!canvas) { showToast('Chưa có mã QR'); return; }
+  var a = document.createElement('a');
+  a.download = 'qr-code-' + currentType + '-' + Date.now() + '.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  showToast('✓ Đã tải file PNG');
+}
+
+function copyQR() {
+  var canvas = document.querySelector('#qr-output canvas');
+  if (!canvas) { showToast('Chưa có mã QR'); return; }
+  canvas.toBlob(function(blob) {
+    try {
+      navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+      showToast('✓ Đã sao chép ảnh QR');
+    } catch(e) {
+      showToast('Trình duyệt chưa hỗ trợ sao chép ảnh');
+    }
+  });
+}
+
+function setType(type, el) {
+  currentType = type;
+  document.querySelectorAll('.type-tab').forEach(function(t){ t.classList.remove('active'); });
+  el.classList.add('active');
+  ['url','text','email','phone','wifi'].forEach(function(t){
+    document.getElementById('form-'+t).style.display = (t === type) ? 'block' : 'none';
+  });
+  document.getElementById('content-alert').classList.remove('show');
+  document.getElementById('content-warn').classList.remove('show');
+}
+
+function setColor(el) {
+  document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); });
+  el.classList.add('active');
+  currentColor = el.dataset.color;
+}
+
+function setCustomColor(val) {
+  currentColor = val;
+  document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelector('.custom-swatch').classList.add('active');
+}
+
+function setSize(el) {
+  document.querySelectorAll('.size-opt').forEach(function(s){ s.classList.remove('active'); });
+  el.classList.add('active');
+  currentSize = parseInt(el.dataset.size);
+}
+
+function quickFill(scenario) {
+  if (scenario === 'event') {
+    setType('url', document.querySelector('[data-type="url"]'));
+    document.getElementById('url-input').value = 'https://forms.gle/yourregistrationform';
+    showToast('Đã điền mẫu đăng ký sự kiện');
+  } else if (scenario === 'wifi') {
+    setType('wifi', document.querySelector('[data-type="wifi"]'));
+    document.getElementById('wifi-ssid').value = 'TenMangWifi';
+    document.getElementById('wifi-password').value = 'matkhau123';
+    showToast('Đã điền mẫu WiFi');
+  } else if (scenario === 'feedback') {
+    setType('url', document.querySelector('[data-type="url"]'));
+    document.getElementById('url-input').value = 'https://forms.gle/yoursurveylink';
+    showToast('Đã điền mẫu khảo sát phản hồi');
+  } else if (scenario === 'contact') {
+    setType('email', document.querySelector('[data-type="email"]'));
+    var emailEl = document.getElementById('email-input');
+    emailEl.value = 'lienhe@congty.com.vn';
+    document.getElementById('email-subject').value = 'Liên hệ';
+    validateEmailField(emailEl);
+    showToast('Đã điền mẫu liên hệ email');
+  }
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+
+// Enter to generate
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && e.ctrlKey) generateQR();
+});
+</script>
+</body>
+</html>
